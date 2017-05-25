@@ -299,24 +299,20 @@ class NP_View extends NucleusPlugin
 				$t1m = date("m", $t1);
 				$t1d = date("d", $t1);
 				if (!($t0y == $t1y && $t0m == $t1m && $t0d == $t1d)) {
-// optimize table
-					$result = mysql_list_tables($MYSQL_DATABASE);
-					$i      = 0;
-					$qq     = 'OPTIMIZE TABLE';
-					while ($i < mysql_num_rows($result)) {
-						$tb_names[$i] = mysql_tablename($result, $i);
-						$qq	  .= ' `' . $tb_names[$i] . '`,';
-						$i++;
-					}
-					$number = strlen($qq);
-					$qq     = substr($qq, 0, $number-1);
 // change field
 					$dquery = 'ALTER TABLE %s DROP %s';
 					$aquery = 'ALTER TABLE %s ADD %s mediumint(8) unsigned not null';
 					sql_query(sprintf($dquery, $viewTable, $vday));
 					sql_query(sprintf($aquery, $viewTable, $vday));
+// optimize table
+					$result = sql_query("SHOW TABLES FROM `{$MYSQL_DATABASE}`");
+					$_ = array();
+					while ($row = sql_fetch_row($result)) {
+						$_[] = sprintf('`%s`', $row[0]);
+					}
+					$opt_query = 'OPTIMIZE TABLE' . join(',', $_);
 					if ($this->getOption('d_optimize') == 'yes') {
-						$qp = sql_query($qq);
+						$qp = sql_query($opt_query);
 					}
 					if ($t0m != $t1m) {
 						$dquery = 'ALTER TABLE %s DROP %s';
@@ -324,7 +320,7 @@ class NP_View extends NucleusPlugin
 						sql_query(sprintf($dquery, $viewTable, $vmonth));
 						sql_query(sprintf($aquery, $viewTable, $vmonth));
 						if ($this->getOption('m_optimize') == 'yes' && !$qp) {
-							sql_query($qq);
+							sql_query($opt_query);
 						}
 					}
 				}
