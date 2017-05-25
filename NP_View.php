@@ -4,8 +4,8 @@ class NP_View extends NucleusPlugin
 {
     function getName()        {return 'View';}
     function getAuthor()      {return 'jun';}
-    function getURL()         {return 'http://japan.nucleuscms.org/bb/viewtopic.php?t=709';}
-    function getVersion()     {return '1.12';}
+    function getURL()         {return 'https://github.com/NucleusCMS/NP_View';}
+    function getVersion()     {return '1.2';}
     function getDescription() {return 'This plugin displays the most viewed items by dairy, weekly, monthly, yearly.'
               . 'Special thanks for Rodrigo Moraes (*NP_Views)'
               . ' and Edmond Hui (*NP_MostViewed). http://www.tipos.com.br/';}
