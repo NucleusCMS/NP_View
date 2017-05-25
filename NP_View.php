@@ -13,124 +13,6 @@ class NP_View extends NucleusPlugin
     function getTableList()   {return array(sql_table('plugin_view'));}
     function supportsFeature($what)    {return (int) in_array($what,array('SqlApi','SqlTablePrefix'));}
 
-    function event_PostDeleteItem($data)
-    {
-        $itemid = intval($data['itemid']);
-        if ($this->getOption('del_item') == 'no') {
-            return;
-        }
-        $query = 'DELETE FROM %s WHERE id = %d';
-        sql_query(sprintf($query, sql_table('plugin_view'), $itemid));
-        return;
-    }
-
-    function doTemplateVar(&$item, $what = '', $num = '')
-    {
-        $viewTable = sql_table('plugin_view');
-        $itemid    = intval($item->itemid);
-        $num       = explode('/', $num);
-        $num[0]    = (getVar('vnum')) ? getVar('vnum') : $num[0];
-        $vtime     = date("Y-m-d H:i:s");
-
-        sscanf($vtime, '%d-%d-%d', $y, $m, $d);
-        if ($what == 'day') {
-            $t0 = mktime(0, 0, 0, $m,     $d-$num[0], $y);
-        }elseif($what == 'month') {
-            $t0 = mktime(0, 0, 0, $m-$num[0], $d,     $y);
-        }else {
-            $t0 = mktime(0, 0, 0, $m,     $d,     $y);
-        }
-
-        $t0m    = date("m", $t0);
-        $vday   = 'week'  . strftime("%w", $t0);
-        $vmonth = 'month' . $t0m;
-
-        $query  = 'SELECT view,'
-                . ' %s                          as vday,'
-                . ' week0+week1+week2+week3+week4+week5+week6       as vweek,'
-                . ' %s                          as vmonth,'
-                . ' month01+month02+month03+month04+month05+month06'
-                . '+month07+month08+month09+month10+month11+month12 as vyear,'
-                . ' vtime, ip FROM %s WHERE id = %d';
-        $query  = sprintf($query, $vday, $vmonth, $viewTable, $itemid);
-        $q1     = sql_query($query);
-
-        while ($row = sql_fetch_assoc($q1)) {
-            if (!$what || $what == 'view') {
-                $view = $row['view'];
-            }
-            $getVmode = getVar('vmode');
-            $notVmode = (!$getVmode && $num[2] == 'a');
-            $notGet   = ($num[1] != 'get');
-            $dairy    = ($getVmode == 'day');
-            $weekly   = ($getVmode == 'week');
-            $monthly  = ($getVmode == 'month');
-            $yearly   = ($getVmode == 'year');
-            if ($what == 'day' && ($notGet || $dairy || $notVmode)) {
-                if ($num[1] == 'a') {
-                    $view = date($this->getOption('day_format'), $t0);
-                }
-                $view .= $row['vday'];
-                if ($num[1] == 'num') {
-                    $query = 'SELECT count("%s") as result'
-                           . ' FROM %s'
-                           . ' WHERE %s >= %s'
-                           . ' ORDER BY %s';
-                    $query = sprintf($query, $vday, $viewTable, $vday, $view, $vday);
-                    $view  = quickQuery($query);
-                }
-            }
-
-            if ($what == 'week' && ($notGet || $weekly || $notVmode)) {
-                $view = $row['vweek'];
-            }
-
-            if ($what == 'month' && ($notGet || $monthly || $notVmode)) {
-                if ($num[1] == 'a') {
-                    $view = date($this->getOption('month_format'), $t0);
-                }
-                $view .= $row['vmonth'];
-                if ($num[1] == 'num') {
-                    $query = 'SELECT count("%s") as result'
-                           . ' FROM %s'
-                           . ' WHERE %s >= %s';
-                    $query = sprintf($query, $vmonth, $viewTable, $vmonth, $view);
-                    $view  = quickQuery($query);
-                }
-            }
-
-            if ($what == 'year' && ($notGet || $yearly || $notVmode)) {
-                $view = $row['vyear'];
-            }
-
-            if ($what == 'time') {
-                $view = $row['vtime'];
-            }
-
-            if ($what == 'ip') {
-                $view = $row['ip'];
-            }
-        }
-
-        $itemTable = sql_table('item');
-        $blogTable = sql_table('blog');
-        $query = 'SELECT %s as result'
-               . ' FROM'
-               . ' %s,'
-               . ' %s'
-               . ' WHERE'
-               . '     inumber = %d'
-               . ' and bnumber = iblog';
-        if ($what == 'bname') {
-            $vquery = sprintf($query, 'bname', $blogTable, $itemTable, $itemid);
-            $view   = quickQuery($vquery);
-        } elseif($what == 'bid') {
-            $vquery = sprintf($query, 'bnumber', $blogTable, $itemTable, $itemid);
-            $view   = quickQuery($vquery);
-        }
-        echo htmlspecialchars($view, ENT_QUOTES, _CHARSET);
-    }
-
     function doSkinVar($skinType,
                        $template = 'default/index',
                        $vitem    = '',
@@ -144,27 +26,22 @@ class NP_View extends NucleusPlugin
         global $CONF, $manager, $blog, $blogid, $catid, $itemid;
         global $member, $memberid, $MYSQL_DATABASE;
 
-        if (!is_numeric($blogid)) {
-            if ($blogid) {
-                $blogid = getBlogidFromName($blogid);
-            } else {
-                $blogid = getBlogidFromName($CONF['DefaultBlog']);
-            }
-        }
+        if (empty($blogid))                            $blogid = getBlogidFromName($CONF['DefaultBlog']);
+        elseif(!preg_match('@^[1-9][0-9]*$@',$blogid)) $blogid = getBlogidFromName($blogid);
+        
         $blogid = intval($blogid);
-        if ($blog) {
-            $b =& $blog;
-        } else {
-            $b =& $manager->getBlog($blogid);
-        }
-        $vmode = htmlspecialchars($vmode, ENT_QUOTES, _CHARSET);
+        
+        if ($blog) $b =& $blog;
+        else       $b =& $manager->getBlog($blogid);
+        
+        $vmode = hsc($vmode);
         $vmode = explode('/', $vmode);
         $num   = explode('/', $num);
         foreach ($num as $key => $val) {
             $num[$key] = intval($val);
         }
         $ip    = ServerVar('REMOTE_ADDR');
-        $ip    = htmlspecialchars($ip, ENT_QUOTES, _CHARSET);
+        $ip    = hsc($ip);
         $vtime = date("Y-m-d H:i:s");
 
         $itemTbale = sql_table('item');
@@ -197,28 +74,19 @@ class NP_View extends NucleusPlugin
         if (!$vitem) {
 // category display
             if ($template == 'cid') {
-                $query = 'SELECT icat as result'
-                       . ' FROM %s'
-                       . ' WHERE inumber = %d';
-                $view  = quickQuery(sprintf($query, $itemTable, $itemid));
-                echo htmlspecialchars($view, ENT_QUOTES, _CHARSET);
-            } elseif ($template == 'cname') {
-                $query = 'SELECT cname as result'
-                       . ' FROM %s,'
-                       . '      %s'
-                       . ' WHERE inumber = %d'
-                       . '   and catid = icat';
-                $query = sprintf($query, $itemTable, $catTable, $itemid);
+                $query = sprintf('SELECT icat AS result FROM %s WHERE inumber=%d', $itemTable, $itemid);
                 $view  = quickQuery($query);
-                echo htmlspecialchars($view, ENT_QUOTES, _CHARSET);
+                echo hsc($view);
+            } elseif ($template == 'cname') {
+                $query = sprintf('SELECT cname AS result FROM %s,%s WHERE inumber=%d AND catid=icat', $itemTable, $catTable, $itemid);
+                $view  = quickQuery($query);
+                echo hsc($view);
 // count
             } elseif ($member->isLoggedIn() && $this->getOption('loggedin') == 'no') {
                 return;
             } elseif ($itemid) {
-                $query = 'SELECT vtime as result'
-                       . ' FROM %s'
-                       . ' ORDER BY vtime DESC LIMIT 1';
-                $time1 = quickQuery(sprintf($query, $viewTable));
+                $query = sprintf('SELECT vtime AS result FROM %s ORDER BY vtime DESC LIMIT 1', $viewTable);
+                $time1 = quickQuery($query);
                 sscanf($time1, '%d-%d-%d', $y, $m, $d);
                 $t1  = mktime(0, 0, 0, $m, $d, $y);
                 $t1y = date("y", $t1);
@@ -226,12 +94,11 @@ class NP_View extends NucleusPlugin
                 $t1d = date("d", $t1);
                 if (!($t0y == $t1y && $t0m == $t1m && $t0d == $t1d)) {
 // change field
-                    $dquery = 'ALTER TABLE %s DROP %s';
-                    $aquery = 'ALTER TABLE %s ADD %s mediumint(8) unsigned not null';
-                    sql_query(sprintf($dquery, $viewTable, $vday));
-                    sql_query(sprintf($aquery, $viewTable, $vday));
+                    sql_query(sprintf('ALTER TABLE %s DROP %s', $viewTable, $vday));
+                    sql_query(sprintf('ALTER TABLE %s ADD %s mediumint(8) unsigned not null', $viewTable, $vday));
 // optimize table
                     $result = sql_query("SHOW TABLES FROM `{$MYSQL_DATABASE}`");
+                    
                     $_ = array();
                     while ($row = sql_fetch_row($result)) {
                         $_[] = sprintf('`%s`', $row[0]);
@@ -240,20 +107,17 @@ class NP_View extends NucleusPlugin
                     if ($this->getOption('d_optimize') == 'yes') {
                         $qp = sql_query($opt_query);
                     }
+                    
                     if ($t0m != $t1m) {
-                        $dquery = 'ALTER TABLE %s DROP %s';
-                        $aquery = 'ALTER TABLE %s ADD %s int(15) unsigned not null';
-                        sql_query(sprintf($dquery, $viewTable, $vmonth));
-                        sql_query(sprintf($aquery, $viewTable, $vmonth));
-                        if ($this->getOption('m_optimize') == 'yes' && !$qp) {
+                        sql_query(sprintf('ALTER TABLE %s DROP %s', $viewTable, $vmonth));
+                        sql_query(sprintf('ALTER TABLE %s ADD %s int(15) unsigned not null', $viewTable, $vmonth));
+                        if ($this->getOption('m_optimize')=='yes' && !$qp) {
                             sql_query($opt_query);
                         }
                     }
                 }
 // countup
-                $query = 'SELECT view, ip, %s, %s FROM %s WHERE id = %d';
-                $query = sprintf($query, $vday, $vmonth, $viewTable, $itemid);
-                $res   = sql_query($query);
+                $res   = sql_query(sprintf('SELECT view, ip, %s, %s FROM %s WHERE id=%d', $vday, $vmonth, $viewTable, $itemid));
                 $row   = sql_fetch_object($res);
                 $view  = intval($row->view);
                 $wview = intval($row->$vday);
@@ -496,6 +360,124 @@ class NP_View extends NucleusPlugin
             $b->showUsingQuery($template, $query, 0, 1, 1);
             echo '</' . $boxTag . '>';
         }
+    }
+    
+    function doTemplateVar(&$item, $what = '', $num = '')
+    {
+        $viewTable = sql_table('plugin_view');
+        $itemid    = intval($item->itemid);
+        $num       = explode('/', $num);
+        $num[0]    = (getVar('vnum')) ? getVar('vnum') : $num[0];
+        $vtime     = date("Y-m-d H:i:s");
+
+        sscanf($vtime, '%d-%d-%d', $y, $m, $d);
+        if ($what == 'day') {
+            $t0 = mktime(0, 0, 0, $m,     $d-$num[0], $y);
+        }elseif($what == 'month') {
+            $t0 = mktime(0, 0, 0, $m-$num[0], $d,     $y);
+        }else {
+            $t0 = mktime(0, 0, 0, $m,     $d,     $y);
+        }
+
+        $t0m    = date("m", $t0);
+        $vday   = 'week'  . strftime("%w", $t0);
+        $vmonth = 'month' . $t0m;
+
+        $query  = 'SELECT view,'
+                . ' %s                          as vday,'
+                . ' week0+week1+week2+week3+week4+week5+week6       as vweek,'
+                . ' %s                          as vmonth,'
+                . ' month01+month02+month03+month04+month05+month06'
+                . '+month07+month08+month09+month10+month11+month12 as vyear,'
+                . ' vtime, ip FROM %s WHERE id = %d';
+        $query  = sprintf($query, $vday, $vmonth, $viewTable, $itemid);
+        $q1     = sql_query($query);
+
+        while ($row = sql_fetch_assoc($q1)) {
+            if (!$what || $what == 'view') {
+                $view = $row['view'];
+            }
+            $getVmode = getVar('vmode');
+            $notVmode = (!$getVmode && $num[2] == 'a');
+            $notGet   = ($num[1] != 'get');
+            $dairy    = ($getVmode == 'day');
+            $weekly   = ($getVmode == 'week');
+            $monthly  = ($getVmode == 'month');
+            $yearly   = ($getVmode == 'year');
+            if ($what == 'day' && ($notGet || $dairy || $notVmode)) {
+                if ($num[1] == 'a') {
+                    $view = date($this->getOption('day_format'), $t0);
+                }
+                $view .= $row['vday'];
+                if ($num[1] == 'num') {
+                    $query = 'SELECT count("%s") as result'
+                           . ' FROM %s'
+                           . ' WHERE %s >= %s'
+                           . ' ORDER BY %s';
+                    $query = sprintf($query, $vday, $viewTable, $vday, $view, $vday);
+                    $view  = quickQuery($query);
+                }
+            }
+
+            if ($what == 'week' && ($notGet || $weekly || $notVmode)) {
+                $view = $row['vweek'];
+            }
+
+            if ($what == 'month' && ($notGet || $monthly || $notVmode)) {
+                if ($num[1] == 'a') {
+                    $view = date($this->getOption('month_format'), $t0);
+                }
+                $view .= $row['vmonth'];
+                if ($num[1] == 'num') {
+                    $query = 'SELECT count("%s") as result'
+                           . ' FROM %s'
+                           . ' WHERE %s >= %s';
+                    $query = sprintf($query, $vmonth, $viewTable, $vmonth, $view);
+                    $view  = quickQuery($query);
+                }
+            }
+
+            if ($what == 'year' && ($notGet || $yearly || $notVmode)) {
+                $view = $row['vyear'];
+            }
+
+            if ($what == 'time') {
+                $view = $row['vtime'];
+            }
+
+            if ($what == 'ip') {
+                $view = $row['ip'];
+            }
+        }
+
+        $itemTable = sql_table('item');
+        $blogTable = sql_table('blog');
+        $query = 'SELECT %s as result'
+               . ' FROM'
+               . ' %s,'
+               . ' %s'
+               . ' WHERE'
+               . '     inumber = %d'
+               . ' and bnumber = iblog';
+        if ($what == 'bname') {
+            $vquery = sprintf($query, 'bname', $blogTable, $itemTable, $itemid);
+            $view   = quickQuery($vquery);
+        } elseif($what == 'bid') {
+            $vquery = sprintf($query, 'bnumber', $blogTable, $itemTable, $itemid);
+            $view   = quickQuery($vquery);
+        }
+        echo hsc($view);
+    }
+    
+    function event_PostDeleteItem($data)
+    {
+        $itemid = intval($data['itemid']);
+        if ($this->getOption('del_item') == 'no') {
+            return;
+        }
+        $query = 'DELETE FROM %s WHERE id = %d';
+        sql_query(sprintf($query, sql_table('plugin_view'), $itemid));
+        return;
     }
     
     function install()
