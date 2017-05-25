@@ -13,7 +13,7 @@ class NP_View extends NucleusPlugin
 	}
 	function getEventList()	{return array('PostDeleteItem');}
 	function getTableList()	{return array(sql_table('plugin_view'));}
-	function supportsFeature($what)	{return (int)($what=='SqlTablePrefix');}
+	function supportsFeature($what)	{return (int) in_array($what,array('SqlApi','SqlTablePrefix'));}
 
 	function install()
 	{
@@ -66,7 +66,7 @@ class NP_View extends NucleusPlugin
 	function unInstall()
 	{
 		if($this->getOption('del_uninstall') == 'yes') {
-			mysql_query("DROP table " . sql_table('plugin_view'));
+			sql_query("DROP table " . sql_table('plugin_view'));
 		}
 		$this->deleteOption('loggedin');
 		$this->deleteOption('ip_count');
@@ -129,7 +129,7 @@ class NP_View extends NucleusPlugin
 		$query  = sprintf($query, $vday, $vmonth, $viewTable, $itemid);
 		$q1     = sql_query($query);
 
-		while ($row = mysql_fetch_assoc($q1)) {
+		while ($row = sql_fetch_assoc($q1)) {
 			if (!$what || $what == 'view') {
 				$view = $row['view'];
 			}
@@ -332,11 +332,11 @@ class NP_View extends NucleusPlugin
 				$query = 'SELECT view, ip, %s, %s FROM %s WHERE id = %d';
 				$query = sprintf($query, $vday, $vmonth, $viewTable, $itemid);
 				$res   = sql_query($query);
-				$row   = mysql_fetch_object($res);
+				$row   = sql_fetch_object($res);
 				$view  = intval($row->view);
 				$wview = intval($row->$vday);
 				$mview = intval($row->$vmonth);
-				if (mysql_num_rows($res) == 0) {
+				if (sql_num_rows($res) == 0) {
 					$query = 'INSERT INTO %s'
 						   . ' (id, view, %s, %s, ip, vtime)'
 						   . ' VALUES ("%d", "1", "1", "1", "%s", "%s")';
