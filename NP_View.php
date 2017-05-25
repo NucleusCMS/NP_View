@@ -13,76 +13,6 @@ class NP_View extends NucleusPlugin
     function getTableList()   {return array(sql_table('plugin_view'));}
     function supportsFeature($what)    {return (int) in_array($what,array('SqlApi','SqlTablePrefix'));}
 
-    function install()
-    {
-        $query = 'CREATE TABLE IF NOT EXISTS ' . sql_table('plugin_view') . ' ('
-               . 'id      int(11)      unsigned not null, '
-               . 'view    int(11)      unsigned, '
-               . 'ip      char(11), '
-               . 'vtime   datetime          not null, '
-               . 'week0   mediumint(8) unsigned not null, '
-               . 'week1   mediumint(8) unsigned not null, '
-               . 'week2   mediumint(8) unsigned not null, '
-               . 'week3   mediumint(8) unsigned not null, '
-               . 'week4   mediumint(8) unsigned not null, '
-               . 'week5   mediumint(8) unsigned not null, '
-               . 'week6   mediumint(8) unsigned not null, '
-               . 'month01 int(11)      unsigned not null, '
-               . 'month02 int(11)      unsigned not null, '
-               . 'month03 int(11)      unsigned not null, '
-               . 'month04 int(11)      unsigned not null, '
-               . 'month05 int(11)      unsigned not null, '
-               . 'month06 int(11)      unsigned not null, '
-               . 'month07 int(11)      unsigned not null, '
-               . 'month08 int(11)      unsigned not null, '
-               . 'month09 int(11)      unsigned not null, '
-               . 'month10 int(11)      unsigned not null, '
-               . 'month11 int(11)      unsigned not null, '
-               . 'month12 int(11)      unsigned not null, '
-               . 'PRIMARY KEY (id)'
-                . ')';
-        sql_query($query);
-        $this->createOption('loggedin',      '1.  Count at loggedin?',          'yesno', 'no');
-        $this->createOption('ip_count',      '2.  Count at same IPadress?',         'yesno', 'no');
-        $this->createOption('del_item',      '3.  Delete View Counts on deleted item?', 'yesno', 'yes');
-        $this->createOption('del_uninstall', '4.  Delete tables on uninstall?',     'yesno', 'no');
-        $this->createOption('item_except',   '5.  ItemID to except. (*ex. 3/15/120)',   'text',  '');
-        $this->createOption('cat_except',    '6.  CategoryID to except. (*ex. 2/5/8)',  'text',  '');
-        $this->createOption('blog_except',   '7.  BlogID to except. (*ex. 1/4)',    'text',  '');
-        $this->createOption('month_format',  '8.  Last month format. (*ex. Y-m )',      'text',  'Y-m');
-        $this->createOption('day_format',    '9.  Last day format. (*ex. Y-m-d )',      'text',  'Y-m-d');
-        $this->createOption('week_format',   '10. Week or Year format. (*ex. -> )',     'text',  ' -> ');
-        $this->createOption('box_format',    '11. Viewbody\'s CSS tag. (*ex1. div)(*ex2. ol)',  'text', 'div');
-        $this->createOption('m_optimize',    '12. Optimize tables every month?',    'yesno', 'no');
-        $this->createOption('d_optimize',    '13. Optimize tables every day?',      'yesno', 'no');
-        $this->createOption('s_format',      '14. Switch format. (*ex. <br />[switch]:)',
-                                                'text', '<br />[switch]:');
-        $this->createOption('s_main',    '15. Switch button. (*ex. Daily/Weekly/Monthly/Yearly/ Access Ranking)',
-                                                'text', 'Daily/Weekly/Monthly/Yearly/ Access Ranking');
-    }
-
-    function unInstall()
-    {
-        if($this->getOption('del_uninstall') == 'yes') {
-            sql_query("DROP table " . sql_table('plugin_view'));
-        }
-        $this->deleteOption('loggedin');
-        $this->deleteOption('ip_count');
-        $this->deleteOption('del_item');
-        $this->deleteOption('del_uninstall');
-        $this->deleteOption('item_except');
-        $this->deleteOption('cat_except');
-        $this->deleteOption('blog_except');
-        $this->deleteOption('month_format');
-        $this->deleteOption('day_format');
-        $this->deleteOption('week_format');
-        $this->deleteOption('box_format');
-        $this->deleteOption('m_optimize');
-        $this->deleteOption('d_optimize');
-        $this->deleteOption('s_format');
-        $this->deleteOption('s_main');
-    }
-
     function event_PostDeleteItem($data)
     {
         $itemid = intval($data['itemid']);
@@ -483,7 +413,7 @@ class NP_View extends NucleusPlugin
             $vl     = explode('&', $uri);
             $vlink      = '<a href="';
             if ($usePathInfo) {
-                $vlink .= serverVar('PHP_SELF') . '?';
+                $vlink .= hsc(serverVar('PHP_SELF')) . '?';
             } else {
                 $vlink .= $vl[0] . '&amp;';
             }
@@ -566,5 +496,75 @@ class NP_View extends NucleusPlugin
             $b->showUsingQuery($template, $query, 0, 1, 1);
             echo '</' . $boxTag . '>';
         }
+    }
+    
+    function install()
+    {
+        $query = 'CREATE TABLE IF NOT EXISTS ' . sql_table('plugin_view') . ' ('
+               . 'id      int(11)      unsigned not null, '
+               . 'view    int(11)      unsigned, '
+               . 'ip      char(11), '
+               . 'vtime   datetime          not null, '
+               . 'week0   mediumint(8) unsigned not null, '
+               . 'week1   mediumint(8) unsigned not null, '
+               . 'week2   mediumint(8) unsigned not null, '
+               . 'week3   mediumint(8) unsigned not null, '
+               . 'week4   mediumint(8) unsigned not null, '
+               . 'week5   mediumint(8) unsigned not null, '
+               . 'week6   mediumint(8) unsigned not null, '
+               . 'month01 int(11)      unsigned not null, '
+               . 'month02 int(11)      unsigned not null, '
+               . 'month03 int(11)      unsigned not null, '
+               . 'month04 int(11)      unsigned not null, '
+               . 'month05 int(11)      unsigned not null, '
+               . 'month06 int(11)      unsigned not null, '
+               . 'month07 int(11)      unsigned not null, '
+               . 'month08 int(11)      unsigned not null, '
+               . 'month09 int(11)      unsigned not null, '
+               . 'month10 int(11)      unsigned not null, '
+               . 'month11 int(11)      unsigned not null, '
+               . 'month12 int(11)      unsigned not null, '
+               . 'PRIMARY KEY (id)'
+                . ')';
+        sql_query($query);
+        $this->createOption('loggedin',      '1.  Count at loggedin?',          'yesno', 'no');
+        $this->createOption('ip_count',      '2.  Count at same IPadress?',         'yesno', 'no');
+        $this->createOption('del_item',      '3.  Delete View Counts on deleted item?', 'yesno', 'yes');
+        $this->createOption('del_uninstall', '4.  Delete tables on uninstall?',     'yesno', 'no');
+        $this->createOption('item_except',   '5.  ItemID to except. (*ex. 3/15/120)',   'text',  '');
+        $this->createOption('cat_except',    '6.  CategoryID to except. (*ex. 2/5/8)',  'text',  '');
+        $this->createOption('blog_except',   '7.  BlogID to except. (*ex. 1/4)',    'text',  '');
+        $this->createOption('month_format',  '8.  Last month format. (*ex. Y-m )',      'text',  'Y-m');
+        $this->createOption('day_format',    '9.  Last day format. (*ex. Y-m-d )',      'text',  'Y-m-d');
+        $this->createOption('week_format',   '10. Week or Year format. (*ex. -> )',     'text',  ' -> ');
+        $this->createOption('box_format',    '11. Viewbody\'s CSS tag. (*ex1. div)(*ex2. ol)',  'text', 'div');
+        $this->createOption('m_optimize',    '12. Optimize tables every month?',    'yesno', 'no');
+        $this->createOption('d_optimize',    '13. Optimize tables every day?',      'yesno', 'no');
+        $this->createOption('s_format',      '14. Switch format. (*ex. <br />[switch]:)',
+                                                'text', '<br />[switch]:');
+        $this->createOption('s_main',    '15. Switch button. (*ex. Daily/Weekly/Monthly/Yearly/ Access Ranking)',
+                                                'text', 'Daily/Weekly/Monthly/Yearly/ Access Ranking');
+    }
+
+    function unInstall()
+    {
+        if($this->getOption('del_uninstall') == 'yes') {
+            sql_query("DROP table " . sql_table('plugin_view'));
+        }
+        $this->deleteOption('loggedin');
+        $this->deleteOption('ip_count');
+        $this->deleteOption('del_item');
+        $this->deleteOption('del_uninstall');
+        $this->deleteOption('item_except');
+        $this->deleteOption('cat_except');
+        $this->deleteOption('blog_except');
+        $this->deleteOption('month_format');
+        $this->deleteOption('day_format');
+        $this->deleteOption('week_format');
+        $this->deleteOption('box_format');
+        $this->deleteOption('m_optimize');
+        $this->deleteOption('d_optimize');
+        $this->deleteOption('s_format');
+        $this->deleteOption('s_main');
     }
 }
