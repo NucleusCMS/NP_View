@@ -331,19 +331,19 @@ class NP_View extends NucleusPlugin
                                . $s_main[0] . '</a> ';
                     echo $printData;
                 }
-                if ($s_main[1]) {
+                if (isset($s_main[1]) && $s_main[1]) {
                     $printData = $vlink . 'week"'
                                . ' title="' . $s_main[1] . $s_main[4] . '">'
                                . $s_main[1] . '</a> ';
                     echo $printData;
                 }
-                if ($s_main[2]) {
+                if (isset($s_main[2]) && $s_main[2]) {
                     $printData = $vlink . 'month"'
                                . ' title="' . $s_main[2] . $s_main[4] . '">'
                                . $s_main[2] . '</a> ';
                     echo $printData;
                 }
-                if ($s_main[3]) {
+                if (isset($s_main[3]) && $s_main[3]) {
                     $printData = $vlink . 'year"'
                                . ' title="' . $s_main[3] . $s_main[4] . '">'
                                . $s_main[3] . '</a> ';
@@ -398,8 +398,8 @@ class NP_View extends NucleusPlugin
                 $view = $row['view'];
             }
             $getVmode = getVar('vmode');
-            $notVmode = (!$getVmode && $num[2] == 'a');
-            $notGet   = ($num[1] != 'get');
+            $notVmode = (!$getVmode && isset($num[2]) && $num[2] == 'a');
+            $notGet   = (!isset($num[1]) || $num[1] != 'get');
             $dairy    = ($getVmode == 'day');
             $weekly   = ($getVmode == 'week');
             $monthly  = ($getVmode == 'month');
